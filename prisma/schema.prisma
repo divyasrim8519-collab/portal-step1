@@ -1,0 +1,155 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role { ADMIN CLIENT EMPLOYEE }
+enum MemberRole { CLIENT EMPLOYEE }
+enum MembershipStatus { ACTIVE REVOKED }
+enum MessageStatus { DELIVERED HELD REJECTED }
+enum RuleCategory { CONTACT_SHARING OFF_PLATFORM COMMERCIAL ABUSE }
+enum Severity { LOW MEDIUM HIGH }
+enum RuleAction { ALLOW_AND_FLAG HOLD }
+enum ReviewStatus { PENDING APPROVED REJECTED DISMISSED }
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  passwordHash  String
+  realName      String
+  phone         String?
+  role          Role
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  sessions      Session[]
+  memberships   Membership[]
+  notifications Notification[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId])
+}
+
+model Project {
+  id           String   @id @default(cuid())
+  name         String
+  description  String   @default("")
+  status       String   @default("ACTIVE")
+  createdAt    DateTime @default(now())
+  memberships  Membership[]
+  conversation Conversation?
+}
+
+model Membership {
+  id         String           @id @default(cuid())
+  projectId  String
+  userId     String
+  role       MemberRole
+  alias      String
+  status     MembershipStatus @default(ACTIVE)
+  createdAt  DateTime         @default(now())
+  revokedAt  DateTime?
+  project    Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages   Message[]
+  readStates ReadState[]
+  @@unique([projectId, userId])
+  @@index([userId, status])
+}
+
+model Conversation {
+  id         String      @id @default(cuid())
+  projectId  String      @unique
+  project    Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  messages   Message[]
+  readStates ReadState[]
+}
+
+model Message {
+  id                 String        @id @default(cuid())
+  conversationId     String
+  senderMembershipId String
+  body               String
+  clientMessageId    String
+  status             MessageStatus @default(DELIVERED)
+  createdAt          DateTime      @default(now())
+  deliveredAt        DateTime?
+  conversation       Conversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender             Membership    @relation(fields: [senderMembershipId], references: [id], onDelete: Cascade)
+  flags              Flag[]
+  @@unique([senderMembershipId, clientMessageId])
+  @@index([conversationId, createdAt])
+}
+
+model Rule {
+  id          String       @id @default(cuid())
+  name        String       @unique
+  category    RuleCategory
+  pattern     String
+  severity    Severity     @default(MEDIUM)
+  action      RuleAction   @default(ALLOW_AND_FLAG)
+  isEnabled   Boolean      @default(true)
+  description String       @default("")
+  flags       Flag[]
+}
+
+model Flag {
+  id           String       @id @default(cuid())
+  messageId    String
+  ruleId       String
+  category     RuleCategory
+  severity     Severity
+  reason       String
+  matchedText  String?
+  reviewStatus ReviewStatus @default(PENDING)
+  reviewNote   String?
+  reviewedById String?
+  reviewedAt   DateTime?
+  createdAt    DateTime     @default(now())
+  message      Message      @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  rule         Rule         @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  @@index([reviewStatus, createdAt])
+  @@index([messageId])
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  type      String
+  message   String
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId, readAt])
+}
+
+model AuditEvent {
+  id         String   @id @default(cuid())
+  actorId    String
+  action     String
+  entityType String
+  entityId   String
+  metadata   Json?
+  createdAt  DateTime @default(now())
+  @@index([createdAt])
+  @@index([actorId])
+}
+
+model ReadState {
+  membershipId   String
+  conversationId String
+  lastReadAt     DateTime     @default(now())
+  membership     Membership   @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  @@id([membershipId, conversationId])
+}
