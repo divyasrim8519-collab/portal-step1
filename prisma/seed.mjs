@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import { RULES } from '../lib/default-rules.mjs';
 
 const prisma = new PrismaClient();
 
@@ -13,29 +14,6 @@ const need = (k) => {
   return v;
 };
 
-const RULES = [
-  { name: 'Phone number', category: 'CONTACT_SHARING', severity: 'HIGH', action: 'HOLD',
-    pattern: '\\+?\\d[\\d\\s\\-().]{8,}\\d',
-    description: 'Phone numbers in common formats' },
-  { name: 'Email address', category: 'CONTACT_SHARING', severity: 'HIGH', action: 'HOLD',
-    pattern: '[a-z0-9._%+\\-]+\\s?(?:@|\\[at\\]|\\(at\\))\\s?[a-z0-9\\-]+(?:\\s?(?:\\.|\\[dot\\]|\\(dot\\))\\s?[a-z0-9\\-]+)+',
-    description: 'Email addresses, including simple "at/dot" spellings' },
-  { name: 'Social handle', category: 'CONTACT_SHARING', severity: 'HIGH', action: 'HOLD',
-    pattern: '(?:^|\\s)@[a-z0-9_.]{3,}|\\b(?:instagram|insta|telegram|linkedin|snapchat|facebook|skype)\\b',
-    description: '@handles and social platform names' },
-  { name: 'External link', category: 'CONTACT_SHARING', severity: 'MEDIUM', action: 'HOLD',
-    pattern: '\\b(?:https?:\\/\\/|www\\.)\\S+',
-    description: 'External URLs' },
-  { name: 'Off-platform request', category: 'OFF_PLATFORM', severity: 'HIGH', action: 'HOLD',
-    pattern: '\\b(?:whatsapp|pay (?:me )?directly|outside (?:the )?(?:platform|portal)|off[\\s\\-]?platform|move (?:this|the) (?:chat|conversation|discussion) (?:to|off))\\b',
-    description: 'Requests to move talk or payment outside the portal' },
-  { name: 'Pricing and payments', category: 'COMMERCIAL', severity: 'MEDIUM', action: 'ALLOW_AND_FLAG',
-    pattern: '\\b(?:price|pricing|quote|quotation|discount|invoice|advance|payment|budget)\\b|[$₹]\\s?\\d+|\\d+\\s?(?:usd|inr|rs\\.?|rupees|dollars)\\b',
-    description: 'Pricing, discounts, payment demands or commitments' },
-  { name: 'Abusive language', category: 'ABUSE', severity: 'HIGH', action: 'HOLD',
-    pattern: '\\b(?:idiot|stupid|moron|shut up|i will (?:hurt|kill|find) you|you will regret)\\b',
-    description: 'Insults and threats' },
-];
 
 async function main() {
   const adminPw = need('SEED_ADMIN_PASSWORD');

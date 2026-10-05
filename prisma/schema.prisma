@@ -7,24 +7,62 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum Role { ADMIN CLIENT EMPLOYEE }
-enum MemberRole { CLIENT EMPLOYEE }
-enum MembershipStatus { ACTIVE REVOKED }
-enum MessageStatus { DELIVERED HELD REJECTED }
-enum RuleCategory { CONTACT_SHARING OFF_PLATFORM COMMERCIAL ABUSE }
-enum Severity { LOW MEDIUM HIGH }
-enum RuleAction { ALLOW_AND_FLAG HOLD }
-enum ReviewStatus { PENDING APPROVED REJECTED DISMISSED }
+enum Role {
+  ADMIN
+  CLIENT
+  EMPLOYEE
+}
+
+enum MemberRole {
+  CLIENT
+  EMPLOYEE
+}
+
+enum MembershipStatus {
+  ACTIVE
+  REVOKED
+}
+
+enum MessageStatus {
+  DELIVERED
+  HELD
+  REJECTED
+}
+
+enum RuleCategory {
+  CONTACT_SHARING
+  OFF_PLATFORM
+  COMMERCIAL
+  ABUSE
+}
+
+enum Severity {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum RuleAction {
+  ALLOW_AND_FLAG
+  HOLD
+}
+
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  DISMISSED
+}
 
 model User {
-  id            String   @id @default(cuid())
-  email         String   @unique
+  id            String         @id @default(cuid())
+  email         String         @unique
   passwordHash  String
   realName      String
   phone         String?
   role          Role
-  isActive      Boolean  @default(true)
-  createdAt     DateTime @default(now())
+  isActive      Boolean        @default(true)
+  createdAt     DateTime       @default(now())
   sessions      Session[]
   memberships   Membership[]
   notifications Notification[]
@@ -37,15 +75,16 @@ model Session {
   expiresAt DateTime
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId])
 }
 
 model Project {
-  id           String   @id @default(cuid())
+  id           String        @id @default(cuid())
   name         String
-  description  String   @default("")
-  status       String   @default("ACTIVE")
-  createdAt    DateTime @default(now())
+  description  String        @default("")
+  status       String        @default("ACTIVE")
+  createdAt    DateTime      @default(now())
   memberships  Membership[]
   conversation Conversation?
 }
@@ -63,6 +102,7 @@ model Membership {
   user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   messages   Message[]
   readStates ReadState[]
+
   @@unique([projectId, userId])
   @@index([userId, status])
 }
@@ -87,6 +127,7 @@ model Message {
   conversation       Conversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   sender             Membership    @relation(fields: [senderMembershipId], references: [id], onDelete: Cascade)
   flags              Flag[]
+
   @@unique([senderMembershipId, clientMessageId])
   @@index([conversationId, createdAt])
 }
@@ -118,6 +159,7 @@ model Flag {
   createdAt    DateTime     @default(now())
   message      Message      @relation(fields: [messageId], references: [id], onDelete: Cascade)
   rule         Rule         @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
   @@index([reviewStatus, createdAt])
   @@index([messageId])
 }
@@ -130,6 +172,7 @@ model Notification {
   readAt    DateTime?
   createdAt DateTime  @default(now())
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId, readAt])
 }
 
@@ -141,6 +184,7 @@ model AuditEvent {
   entityId   String
   metadata   Json?
   createdAt  DateTime @default(now())
+
   @@index([createdAt])
   @@index([actorId])
 }
@@ -151,5 +195,6 @@ model ReadState {
   lastReadAt     DateTime     @default(now())
   membership     Membership   @relation(fields: [membershipId], references: [id], onDelete: Cascade)
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
   @@id([membershipId, conversationId])
 }
